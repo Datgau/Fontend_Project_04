@@ -1,23 +1,34 @@
-// src/@type/post.ts
+// Types cho Post, Comment, Story
 export interface User {
-    id: string;
-    username: string;
-    avatar: string;
-}
-
-export interface Post {
-    id: string;
-    user: User;
-    content: string;
-    mediaUrl?: string;
-    likes: string[]; // userIds
-    comments: Comment[];
-    createdAt: string;
+  id: number;
+  username: string;
+  fullName: string;
+  avatar: string;
 }
 
 export interface Comment {
-    id: string;
-    user: User;
-    text: string;
-    createdAt: string;
+  id: number;
+  postId: number;
+  user: User;
+  content: string;
+  createdAt: string;
+}
+
+export interface Post {
+  id: number;
+  user: User;
+  content: string | null;
+  images: string[];
+  likesCount: number;
+  commentsCount: number;
+  createdAt: string;
+  likedByCurrentUser: boolean;
+}
+
+export interface Story {
+  id: number;
+  user: User;
+  image: string;
+  createdAt: string;
+  viewed: boolean;
 }

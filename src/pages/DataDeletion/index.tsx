@@ -1,17 +1,17 @@
 export default function DataDeletion() {
   return (
     <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
-      <h1>Hướng Dẫn Xóa Dữ Liệu Người Dùng – PulseNet</h1>
+      <h1>Hướng Dẫn Xóa Dữ Liệu Người Dùng – HeartBeat</h1>
       <p>Cập nhật lần cuối: {new Date().toLocaleDateString()}</p>
 
       <p>
-        Nếu bạn muốn xóa dữ liệu cá nhân đã cung cấp cho PulseNet thông qua đăng nhập
+        Nếu bạn muốn xóa dữ liệu cá nhân đã cung cấp cho HeartBeat thông qua đăng nhập
         Facebook, Google hoặc tài khoản email, bạn có thể thực hiện theo các bước sau:
       </p>
 
       <h2>1. Cách yêu cầu xóa dữ liệu</h2>
       <ol>
-        <li>Gửi email đến: <strong>pulsenet.support@example.com</strong></li>
+        <li>Gửi email đến: <strong>HeartBeat.support@example.com</strong></li>
         <li>Tiêu đề: "Yêu cầu xóa dữ liệu người dùng"</li>
         <li>Cung cấp thông tin:
           <ul>
@@ -57,20 +57,20 @@ export default function DataDeletion() {
       <ol>
         <li>Vào <strong>Facebook → Settings & Privacy → Settings</strong></li>
         <li>Chọn <strong>Apps and Websites</strong></li>
-        <li>Tìm <strong>PulseNet</strong> và click <strong>Remove</strong></li>
+        <li>Tìm <strong>HeartBeat</strong> và click <strong>Remove</strong></li>
       </ol>
 
       <h3>Thu hồi quyền truy cập Google:</h3>
       <ol>
         <li>Vào <strong>Google Account → Security</strong></li>
         <li>Chọn <strong>Third-party apps with account access</strong></li>
-        <li>Tìm <strong>PulseNet</strong> và click <strong>Remove Access</strong></li>
+        <li>Tìm <strong>HeartBeat</strong> và click <strong>Remove Access</strong></li>
       </ol>
 
       <h2>6. Xóa tài khoản trong ứng dụng</h2>
       <p>Bạn cũng có thể tự xóa tài khoản trực tiếp trong ứng dụng:</p>
       <ol>
-        <li>Đăng nhập vào PulseNet</li>
+        <li>Đăng nhập vào HeartBeat</li>
         <li>Vào <strong>Settings → Account</strong></li>
         <li>Chọn <strong>Delete Account</strong></li>
         <li>Xác nhận xóa tài khoản</li>
@@ -82,19 +82,19 @@ export default function DataDeletion() {
         Nếu bạn có bất kỳ câu hỏi nào về việc xóa dữ liệu, vui lòng liên hệ:
       </p>
       <ul>
-        <li>Email: <strong>pulsenet.support@example.com</strong></li>
+        <li>Email: <strong>dattn12042001@gmail.com</strong></li>
         <li>Thời gian phản hồi: Trong vòng 24 giờ</li>
       </ul>
 
       <h2>8. Cam kết của chúng tôi</h2>
       <p>
-        PulseNet cam kết tôn trọng quyền riêng tư của bạn và tuân thủ các quy định về
+        HeartBeat cam kết tôn trọng quyền riêng tư của bạn và tuân thủ các quy định về
         bảo vệ dữ liệu cá nhân. Chúng tôi sẽ xử lý yêu cầu xóa dữ liệu của bạn một cách
         nhanh chóng và minh bạch.
       </p>
 
       <p style={{ marginTop: "40px", fontStyle: "italic", color: "#666" }}>
-        Cảm ơn bạn đã sử dụng PulseNet. Chúng tôi rất tiếc khi bạn rời đi và hy vọng
+        Cảm ơn bạn đã sử dụng HeartBeat. Chúng tôi rất tiếc khi bạn rời đi và hy vọng
         sẽ được phục vụ bạn trong tương lai.
       </p>
     </div>

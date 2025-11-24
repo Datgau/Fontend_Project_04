@@ -60,7 +60,7 @@ const VerifyOtp = () => {
     return (
         <main className="auth-page">
             <section className="auth-panel auth-panel--accent">
-                <span className="auth-logo">PulseNet</span>
+                <span className="auth-logo">HeartBeat</span>
                 <h1>Xác thực tài khoản</h1>
                 <p>
                     Vui lòng nhập mã OTP được gửi đến email <strong>{email}</strong> để hoàn tất đăng ký.

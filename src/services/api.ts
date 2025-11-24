@@ -6,7 +6,7 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import { triggerLoginModal } from "./authModalService";
-import { clearAuthSession, getAccessToken, updateStoredTokens } from "./authStorage";
+import { clearAuthSession, getAccessToken, getRefreshToken, updateStoredTokens } from "./authStorage";
 import type {AuthTokens} from "../@type/login.ts";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
@@ -14,7 +14,6 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080
 const createClient = (): AxiosInstance =>
     axios.create({
       baseURL: API_BASE_URL,
-      headers: { "Content-Type": "application/json" },
       withCredentials: true,
     });
 
@@ -24,10 +23,17 @@ export const privateClient = createClient();
 privateClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
   if (token) {
-    const headers = new AxiosHeaders(config.headers || {});
-    headers.set("Authorization", `Bearer ${token}`);
-    config.headers = headers;
+    if (!config.headers) {
+      config.headers = new AxiosHeaders();
+    }
+    config.headers.set("Authorization", `Bearer ${token}`);
   }
+  
+  // Set Content-Type to JSON by default if not already set and not FormData
+  if (!config.headers.has("Content-Type") && !(config.data instanceof FormData)) {
+    config.headers.set("Content-Type", "application/json");
+  }
+  
   return config;
 });
 
@@ -39,7 +45,9 @@ interface RefreshTokenResponse {
 }
 
 const refreshAccessToken = async (): Promise<string> => {
+  // Refresh token được gửi tự động qua cookie (httpOnly)
   const response: AxiosResponse<RefreshTokenResponse> = await publicClient.post("/auth/refresh-token");
+  
   const newAccessToken = response.data?.data?.accessToken;
 
   if (!newAccessToken) {
@@ -62,9 +70,16 @@ privateClient.interceptors.response.use(
 
         try {
           const newAccessToken = await refreshAccessToken();
-          const headers = new AxiosHeaders(originalRequest.headers || {});
-          headers.set("Authorization", `Bearer ${newAccessToken}`);
-          originalRequest.headers = headers;
+          
+          // Đảm bảo headers tồn tại
+          if (!originalRequest.headers) {
+            originalRequest.headers = new AxiosHeaders();
+          }
+          
+          // Gắn token mới vào request
+          originalRequest.headers.set("Authorization", `Bearer ${newAccessToken}`);
+          
+          // Retry request với token mới
           return privateClient(originalRequest);
         } catch (refreshError) {
           clearAuthSession();

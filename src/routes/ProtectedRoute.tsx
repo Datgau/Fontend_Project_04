@@ -1,66 +1,49 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { Box, CircularProgress } from "@mui/material";
 import { useAuth } from "./AuthContext";
-import { Modal } from "antd";
-import { useState, useEffect } from "react";
 
 interface ProtectedRouteProps {
-    allowedRoles?: string[];
+  allowedRoles?: string[];
 }
 
 const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
-    const { isLoggedIn, user, loading } = useAuth();
-    const [showModal, setShowModal] = useState(false);
-    const [redirectToLogin, setRedirectToLogin] = useState(false);
-    const [redirectToHome, setRedirectToHome] = useState(false);
+  const { isLoggedIn, user, loading } = useAuth();
+  const location = useLocation();
 
-    useEffect(() => {
-        if (!loading) {
-            if (!isLoggedIn || !user) {
-                setShowModal(true);
-                return;
-            }
-            if (allowedRoles && user && !allowedRoles.includes(user.role?.toUpperCase?.() || "")) {
-                setRedirectToHome(true);
-            }
-        }
-    }, [isLoggedIn, user, loading, allowedRoles]);
+  // Debug logs
+  console.log("ProtectedRoute - Loading:", loading);
+  console.log("ProtectedRoute - IsLoggedIn:", isLoggedIn);
+  console.log("ProtectedRoute - User:", user);
 
-    const handleLoginOk = () => {
-        setShowModal(false);
-        setRedirectToLogin(true);
-    };
-
-    const handleLoginCancel = () => {
-    };
-
-    if (loading) return <div>Loading...</div>;
-    if (redirectToLogin) return <Navigate to="/login" replace />;
-    if (redirectToHome) return <Navigate to="/home" replace />;
-    if (
-        isLoggedIn &&
-        user &&
-        (!allowedRoles || allowedRoles.includes(user.role?.toUpperCase?.() || ""))
-    ) {
-        return <Outlet />;
-    }
-
+  // Show loading spinner while checking auth
+  if (loading) {
     return (
-        <>
-            <div>Checking access rights...</div>
-            <Modal
-                open={showModal}
-                title="Login required"
-                onOk={handleLoginOk}
-                onCancel={handleLoginCancel}
-                closable={false}
-                maskClosable={false}
-                okText="Login"
-                cancelText="Cancel"
-            >
-                <p>You need to log in to use this feature !</p>
-            </Modal>
-        </>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <CircularProgress />
+      </Box>
     );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isLoggedIn || !user) {
+    console.log("ProtectedRoute - Redirecting to login");
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Check role-based access
+  if (allowedRoles && !allowedRoles.includes(user.role?.toUpperCase() || "")) {
+    return <Navigate to="/heartbeat/home" replace />;
+  }
+
+  // User is authenticated and authorized
+  return <Outlet />;
 };
 
 export default ProtectedRoute;

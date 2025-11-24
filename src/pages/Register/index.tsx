@@ -1,14 +1,10 @@
-import {useState, useEffect} from "react";
-import type {FormEvent} from "react";
-import {Link, useNavigate} from "react-router-dom";
+import { useState, useEffect } from "react";
+import type { FormEvent } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Snackbar, Alert } from "@mui/material";
 import "../../styles/AuthPage.css";
 import { AuthService } from "../../services/authService";
 import { useAuth } from "../../routes/AuthContext";
-
-type Feedback = {
-  type: "success" | "error";
-  message: string;
-};
 
 const Register = () => {
   const [fullName, setFullName] = useState("");
@@ -17,7 +13,10 @@ const Register = () => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agree, setAgree] = useState(true);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const {login: persistSession} = useAuth();
@@ -152,7 +151,13 @@ const Register = () => {
           },
           true
         );
-        navigate("/");
+        setFeedback({
+          type: "success",
+          message: "Đăng nhập Google thành công!",
+        });
+        setTimeout(() => {
+          navigate("/heartbeat/home");
+        }, 1000);
       } else {
         setFeedback({
           type: "error",
@@ -269,7 +274,13 @@ const Register = () => {
                   },
                   true
                 );
-                navigate("/");
+                setFeedback({
+                  type: "success",
+                  message: "Đăng nhập Facebook thành công!",
+                });
+                setTimeout(() => {
+                  navigate("/heartbeat/home");
+                }, 1000);
               } else {
                 setFeedback({
                   type: "error",
@@ -298,7 +309,7 @@ const Register = () => {
   return (
     <main className="auth-page">
       <section className="auth-panel auth-panel--accent">
-        <span className="auth-logo">PulseNet</span>
+        <span className="auth-logo">HeartBeat</span>
         <h1>Xây dựng hồ sơ cá nhân nổi bật</h1>
         <p>
           Cá nhân hóa profile bằng template video, khung hình AI và huy hiệu
@@ -344,15 +355,11 @@ const Register = () => {
         <div>
           <h2 className="auth-card-title">Tạo tài khoản mới</h2>
           <p className="auth-card-subtitle">
-            Gia nhập cộng đồng sáng tạo của PulseNet chỉ với vài bước.
+            Gia nhập cộng đồng sáng tạo của HeartBeat chỉ với vài bước.
           </p>
         </div>
 
-        {feedback && (
-          <div className={`status-message ${feedback.type}`}>
-            {feedback.message}
-          </div>
-        )}
+
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-split">
@@ -492,6 +499,23 @@ const Register = () => {
           </Link>
         </p>
       </section>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={feedback !== null}
+        autoHideDuration={6000}
+        onClose={() => setFeedback(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert
+          onClose={() => setFeedback(null)}
+          severity={feedback?.type || "info"}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {feedback?.message}
+        </Alert>
+      </Snackbar>
     </main>
   );
 };

@@ -4,11 +4,7 @@ import {Link, useNavigate} from "react-router-dom";
 import "../../styles/AuthPage.css";
 import { AuthService } from "../../services/authService";
 import { useAuth } from "../../routes/AuthContext";
-
-type Feedback = {
-  type: "success" | "error";
-  message: string;
-};
+import { Alert, Snackbar } from "@mui/material";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -16,35 +12,51 @@ const Login = () => {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
+  const [feedback, setFeedback] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
   const [submitting, setSubmitting] = useState(false);
- 
+
   useEffect(() => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     if (!googleClientId) {
       console.warn("Google Client ID not configured");
       return;
     }
+    if (document.getElementById("google-client-script")) return;
 
     const script = document.createElement("script");
     script.src = "https://accounts.google.com/gsi/client";
     script.async = true;
     script.defer = true;
+    script.id = "google-client-script";
+
     script.onload = () => {
-      window.google.accounts.id.initialize({
-        client_id: googleClientId,
-        callback: handleGoogleResponse,
-        ux_mode: 'popup',
-        use_fedcm_for_prompt: false
-      });
+      if (window.google?.accounts?.id) {
+        window.google.accounts.id.initialize({
+          client_id: googleClientId,
+          callback: handleGoogleResponse,
+          ux_mode: "popup",
+          use_fedcm_for_prompt: false,
+        });
+        window.google.accounts.id.renderButton(
+            document.getElementById("google-signin-button"),
+            { theme: "outline", size: "large" }
+        );
+      }
     };
+
     document.body.appendChild(script);
+
     return () => {
       if (document.body.contains(script)) {
         document.body.removeChild(script);
       }
     };
   }, []);
+
 
   useEffect(() => {
     const facebookAppId = import.meta.env.VITE_FACEBOOK_APP_ID;
@@ -93,7 +105,13 @@ const Login = () => {
           },
           true
         );
-        navigate("/");
+        setFeedback({
+          type: "success",
+          message: "Đăng nhập Google thành công!",
+        });
+        setTimeout(() => {
+          navigate("/heartbeat/home");
+        }, 1000);
       } else {
         setFeedback({
           type: "error",
@@ -127,31 +145,33 @@ const Login = () => {
     }
 
     try {
-      // Sử dụng popup thay vì prompt để tránh FedCM
-      window.google.accounts.id.prompt((notification: any) => {
-        if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-          // Fallback: Tạo button tạm thời và click
-          const tempDiv = document.createElement('div');
-          tempDiv.style.display = 'none';
-          document.body.appendChild(tempDiv);
-          
-          window.google.accounts.id.renderButton(tempDiv, {
-            type: 'standard',
-            size: 'large',
-            text: 'signin_with',
-            shape: 'rectangular',
-          });
-          
-          // Trigger click on the rendered button
-          setTimeout(() => {
-            const googleBtn = tempDiv.querySelector('div[role="button"]') as HTMLElement;
-            if (googleBtn) {
-              googleBtn.click();
-            }
-            setTimeout(() => document.body.removeChild(tempDiv), 1000);
-          }, 100);
-        }
+      // Tạo hidden div và render Google button
+      const tempDiv = document.createElement('div');
+      tempDiv.style.position = 'fixed';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.left = '-9999px';
+      document.body.appendChild(tempDiv);
+      
+      window.google.accounts.id.renderButton(tempDiv, {
+        type: 'standard',
+        size: 'large',
+        text: 'signin_with',
+        shape: 'rectangular',
       });
+      
+      // Trigger click sau khi render
+      setTimeout(() => {
+        const googleBtn = tempDiv.querySelector('div[role="button"]') as HTMLElement;
+        if (googleBtn) {
+          googleBtn.click();
+        }
+        // Cleanup sau 2 giây
+        setTimeout(() => {
+          if (document.body.contains(tempDiv)) {
+            document.body.removeChild(tempDiv);
+          }
+        }, 2000);
+      }, 100);
     } catch (error) {
       console.error("Google login error:", error);
       setFeedback({
@@ -160,6 +180,7 @@ const Login = () => {
       });
     }
   };
+
   const handleFacebookLogin = () => {
     if (!import.meta.env.VITE_FACEBOOK_APP_ID) {
       setFeedback({
@@ -202,7 +223,13 @@ const Login = () => {
                   },
                   true
                 );
-                navigate("/");
+                setFeedback({
+                  type: "success",
+                  message: "Đăng nhập Facebook thành công!",
+                });
+                setTimeout(() => {
+                  navigate("/heartbeat/home");
+                }, 1000);
               } else {
                 setFeedback({
                   type: "error",
@@ -226,7 +253,6 @@ const Login = () => {
         { scope: "public_profile,email" }
     );
   };
-
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -259,6 +285,9 @@ const Login = () => {
         type: "success",
         message: response.message || "Đăng nhập thành công!",
       });
+      setTimeout(() => {
+        navigate("/heartbeat/home");
+      }, 1000);
     } catch (error) {
       const message =
         error instanceof Error
@@ -273,13 +302,14 @@ const Login = () => {
     }
   };
 
+
   return (
     <main className="auth-page">
       <section className="auth-panel auth-panel--accent">
-        <span className="auth-logo">PulseNet</span>
+        <span className="auth-logo">HeartBeat</span>
         <h1>Kết nối cộng đồng, chia sẻ khoảnh khắc</h1>
         <p>
-          PulseNet giúp bạn cập nhật mọi xu hướng, trò chuyện với cộng đồng và
+          HeartBeat giúp bạn cập nhật mọi xu hướng, trò chuyện với cộng đồng và
           kể câu chuyện của riêng mình bằng những công cụ sáng tạo mạnh mẽ.
         </p>
         <ul className="auth-highlights">
@@ -318,11 +348,7 @@ const Login = () => {
           </p>
         </div>
 
-        {feedback && (
-          <div className={`status-message ${feedback.type}`}>
-            {feedback.message}
-          </div>
-        )}
+
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <div className="form-group">
@@ -365,7 +391,7 @@ const Login = () => {
           </div>
 
           <button className="auth-submit" type="submit" disabled={submitting}>
-            {submitting ? "Đang đăng nhập..." : "Đăng nhập vào PulseNet"}
+            {submitting ? "Đang đăng nhập..." : "Đăng nhập vào HeartBeat"}
           </button>
         </form>
 
@@ -387,7 +413,21 @@ const Login = () => {
             Meta Portal
           </button>
         </div>
-
+        <Snackbar
+            open={feedback !== null}
+            autoHideDuration={6000}
+            onClose={() => setFeedback(null)}
+            anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        >
+          <Alert
+              onClose={() => setFeedback(null)}
+              severity={feedback?.type || "info"}
+              variant="filled"
+              sx={{ width: "100%" }}
+          >
+            {feedback?.message}
+          </Alert>
+        </Snackbar>
         <p className="auth-footer">
           Chưa có tài khoản?{" "}
           <Link className="link" to="/register">
@@ -397,6 +437,7 @@ const Login = () => {
       </section>
     </main>
   );
+
 };
 
 export default Login;

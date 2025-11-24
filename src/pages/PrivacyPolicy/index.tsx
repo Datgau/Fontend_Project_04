@@ -1,12 +1,12 @@
 export default function PrivacyPolicy() {
   return (
     <div style={{ maxWidth: "800px", margin: "40px auto", padding: "20px" }}>
-      <h1>Chính Sách Quyền Riêng Tư – PulseNet</h1>
+      <h1>Chính Sách Quyền Riêng Tư – HeartBeat</h1>
       <p>Cập nhật lần cuối: {new Date().toLocaleDateString()}</p>
 
       <p>
         Chúng tôi tôn trọng quyền riêng tư của bạn và cam kết bảo vệ dữ liệu cá nhân
-        khi bạn sử dụng PulseNet. Chính sách này mô tả cách chúng tôi thu thập, sử dụng
+        khi bạn sử dụng HeartBeat. Chính sách này mô tả cách chúng tôi thu thập, sử dụng
         và bảo vệ thông tin của bạn.
       </p>
 
@@ -21,7 +21,7 @@ export default function PrivacyPolicy() {
       <h2>2. Cách chúng tôi sử dụng thông tin</h2>
       <p>Chúng tôi sử dụng thông tin để:</p>
       <ul>
-        <li>Vận hành nền tảng PulseNet</li>
+        <li>Vận hành nền tảng HeartBeat</li>
         <li>Cung cấp tính năng cá nhân hóa</li>
         <li>Ngăn chặn hành vi gian lận và bảo mật hệ thống</li>
         <li>Hỗ trợ khách hàng khi cần thiết</li>
@@ -50,10 +50,10 @@ export default function PrivacyPolicy() {
       <h2>5. Liên hệ</h2>
       <p>
         Nếu bạn có câu hỏi, vui lòng liên hệ:  
-        <strong> pulsenet.support@example.com</strong>
+        <strong> HeartBeat.support@example.com</strong>
       </p>
 
-      <p>Cảm ơn bạn đã tin tưởng sử dụng PulseNet.</p>
+      <p>Cảm ơn bạn đã tin tưởng sử dụng HeartBeat.</p>
     </div>
   );
 }

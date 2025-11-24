@@ -29,14 +29,49 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const [user, setUser] = useState<AuthUser | null>(null);
     const [loading, setLoading] = useState(true);
 
+
+
+    // Load session on mount
     useEffect(() => {
-        const session = loadAuthSession();
-        if (session?.user) {
-            setUser(session.user);
-            setIsLoggedIn(true);
-        }
-        setLoading(false);
+        const initAuth = async () => {
+            const session = loadAuthSession();
+            console.log("Loading auth session:", session);
+            
+            if (session?.user) {
+                setUser(session.user);
+                setIsLoggedIn(true);
+            }
+            setLoading(false);
+        };
+        
+        initAuth();
     }, []);
+
+    // Sync auth state across tabs using storage event
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === "pulse.auth.session") {
+                if (e.newValue) {
+                    // Session updated in another tab
+                    const session = JSON.parse(e.newValue);
+                    if (session?.user) {
+                        setUser(session.user);
+                        setIsLoggedIn(true);
+                    }
+                } else {
+                    // Session cleared in another tab (logout)
+                    setUser(null);
+                    setIsLoggedIn(false);
+                }
+            }
+        };
+
+        window.addEventListener("storage", handleStorageChange);
+        return () => window.removeEventListener("storage", handleStorageChange);
+    }, []);
+
+    // Token refresh is handled by API interceptor (api.ts)
+    // No need for interval polling
 
     const login = (userData: AuthUser, rememberMe: boolean = true) => {
         persistAuthSession(userData, rememberMe);

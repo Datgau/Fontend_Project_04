@@ -50,14 +50,17 @@ export const getRefreshToken = (): string | null => {
   return session?.user.tokens.refreshToken ?? null;
 };
 
-export const updateStoredTokens = (tokens: AuthTokens) => {
+export const updateStoredTokens = (tokens: Partial<AuthTokens>) => {
   const session = readSession();
   if (!session) return;
   writeSession({
     ...session,
     user: {
       ...session.user,
-      tokens,
+      tokens: {
+        ...session.user.tokens,
+        ...tokens,
+      },
     },
   });
 };

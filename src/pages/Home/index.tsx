@@ -34,13 +34,15 @@ const Home = () => {
       if (response.success && response.data) {
         console.log("Loaded posts:", response.data);
         
+        const newPosts = response.data || [];
+        
         if (pageNum === 0) {
-          setPosts(response.data);
+          setPosts(newPosts);
         } else {
-          setPosts((prev) => [...prev, ...response.data]);
+          setPosts((prev) => [...prev, ...newPosts]);
         }
         
-        setHasMore(response.data.length === 10);
+        setHasMore(newPosts.length === 10);
         setPage(pageNum);
       } else {
         console.warn("API failed:", response.message);
@@ -66,7 +68,7 @@ const Home = () => {
     setPosts((prevPosts) => [newPost, ...prevPosts]);
   };
 
-  const handleCommentAdd = (postId: number, comment: Comment) => {
+  const handleCommentAdd = (postId: number, _comment: Comment) => {
     // TODO: Call API to add comment
     setPosts((prevPosts) =>
       prevPosts.map((post) =>

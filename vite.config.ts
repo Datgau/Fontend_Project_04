@@ -7,7 +7,6 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
-    https: false, // Set to true if you want HTTPS in local dev
     allowedHosts: [
       'localhost',
       '.ngrok-free.dev',

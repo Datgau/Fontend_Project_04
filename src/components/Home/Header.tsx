@@ -107,26 +107,42 @@ const Header = () => {
     >
       <Toolbar sx={{ minHeight: { xs: 56, sm: 64 } }}>
         {/* Logo */}
-        <Typography
-          variant="h6"
-          noWrap
-          component="div"
+        <Box
           onClick={() => navigate("/heartbeat/home")}
           sx={{
-            display: { xs: "none", sm: "block" },
-            fontWeight: 700,
-            background: "linear-gradient(45deg, #e91e63 30%, #f50057 90%)",
-            WebkitBackgroundClip: "text",
-            WebkitTextFillColor: "transparent",
-            letterSpacing: "0.1em",
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
             cursor: "pointer",
             "&:hover": {
               opacity: 0.8,
             },
           }}
         >
-          HeartBeat
-        </Typography>
+          <img 
+            src="/heartbeat.png" 
+            alt="HeartBeat Logo" 
+            style={{ 
+              height: '40px', 
+              width: 'auto',
+              display: 'block'
+            }} 
+          />
+          <Typography
+            variant="h6"
+            noWrap
+            sx={{
+              display: { xs: "none", sm: "block" },
+              fontWeight: 700,
+              background: "linear-gradient(45deg, #e91e63 30%, #f50057 90%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              letterSpacing: "0.1em",
+            }}
+          >
+            HeartBeat
+          </Typography>
+        </Box>
 
         {/* Search Bar */}
         <SearchBox>

@@ -302,7 +302,7 @@ const Register = () => {
             });
           }
         },
-        {scope: "email,public_profile"}
+        { scope: "public_profile" }
     );
   };
 

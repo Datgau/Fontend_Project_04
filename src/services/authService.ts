@@ -29,6 +29,9 @@ export interface LoginPayload {
 export interface LoginResult {
   username: string;
   role: string;
+  email?: string;
+  fullName?: string;
+  avatar?: string;
   token: {
     accessToken: string;
     refreshToken: string;

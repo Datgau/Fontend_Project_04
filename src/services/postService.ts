@@ -192,4 +192,125 @@ export const PostService = {
       };
     }
   },
+
+  /**
+   * Toggle like on a post
+   */
+  async toggleLike(postId: number): Promise<{ success: boolean; isLiked: boolean; likeCount: number; message?: string }> {
+    try {
+      const response = await api.post(`/posts/${postId}/like`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Toggle like error:", error);
+      return {
+        success: false,
+        isLiked: false,
+        likeCount: 0,
+        message: error.response?.data?.message || "Failed to toggle like",
+      };
+    }
+  },
+
+  /**
+   * Get like count for a post
+   */
+  async getLikes(postId: number): Promise<{ success: boolean; likeCount: number; message?: string }> {
+    try {
+      const response = await api.get(`/posts/${postId}/likes`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Get likes error:", error);
+      return {
+        success: false,
+        likeCount: 0,
+        message: error.response?.data?.message || "Failed to get likes",
+      };
+    }
+  },
+
+  /**
+   * Add comment to a post
+   */
+  async addComment(postId: number, content: string): Promise<{ success: boolean; comment?: any; message?: string }> {
+    try {
+      const response = await api.post(`/posts/${postId}/comments`, { content });
+      const data = response.data;
+      
+      // Transform flat CommentDTO to nested Comment structure
+      if (data.success && data.comment) {
+        data.comment = {
+          id: data.comment.id,
+          postId: data.comment.postId,
+          content: data.comment.content,
+          createdAt: data.comment.createdAt,
+          user: {
+            id: data.comment.userId,
+            username: data.comment.username,
+            fullName: data.comment.fullName,
+            avatar: data.comment.avatar,
+          },
+        };
+      }
+      
+      return data;
+    } catch (error: any) {
+      console.error("Add comment error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to add comment",
+      };
+    }
+  },
+
+  /**
+   * Get comments for a post
+   */
+  async getComments(postId: number): Promise<{ success: boolean; comments?: any[]; message?: string }> {
+    try {
+      const response = await api.get(`/posts/${postId}/comments`);
+      const data = response.data;
+      
+      // Transform flat CommentDTO to nested Comment structure
+      if (data.success && data.comments) {
+        data.comments = data.comments.map((comment: any) => ({
+          id: comment.id,
+          postId: comment.postId,
+          content: comment.content,
+          createdAt: comment.createdAt,
+          user: {
+            id: comment.userId,
+            username: comment.username,
+            fullName: comment.fullName,
+            avatar: comment.avatar,
+          },
+        }));
+      }
+      
+      return data;
+    } catch (error: any) {
+      console.error("Get comments error:", error);
+      return {
+        success: false,
+        comments: [],
+        message: error.response?.data?.message || "Failed to get comments",
+      };
+    }
+  },
+
+  /**
+   * Delete a comment
+   */
+  async deleteComment(commentId: number): Promise<{ success: boolean; message?: string }> {
+    try {
+      const response = await api.delete(`/posts/comments/${commentId}`);
+      return response.data;
+    } catch (error: any) {
+      console.error("Delete comment error:", error);
+      return {
+        success: false,
+        message: error.response?.data?.message || "Failed to delete comment",
+      };
+    }
+  },
 };
+

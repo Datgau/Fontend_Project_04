@@ -98,6 +98,9 @@ const Login = () => {
           {
             username: result.data.username,
             role: result.data.role,
+            email: result.data.email,
+            fullName: result.data.fullName,
+            avatar: result.data.avatar,
             tokens: {
               accessToken: result.data.token.accessToken,
               expiresIn: result.data.token.expiresIn,
@@ -205,8 +208,6 @@ const Login = () => {
           console.log("Facebook response:", response);
           if (response.authResponse) {
             console.log("Facebook access token received");
-            
-            // Handle async operation separately
             AuthService.oauthLogin({
               provider: "facebook",
               accessToken: response.authResponse.accessToken,
@@ -216,6 +217,9 @@ const Login = () => {
                   {
                     username: result.data.username,
                     role: result.data.role,
+                    email: result.data.email,
+                    fullName: result.data.fullName,
+                    avatar: result.data.avatar,
                     tokens: {
                       accessToken: result.data.token.accessToken,
                       expiresIn: result.data.token.expiresIn,
@@ -273,6 +277,9 @@ const Login = () => {
         {
           username: response.data.username,
           role: response.data.role,
+          email: response.data.email,
+          fullName: response.data.fullName,
+          avatar: response.data.avatar,
           tokens: {
             accessToken: response.data.token.accessToken,
             expiresIn: response.data.token.expiresIn,

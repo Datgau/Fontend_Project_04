@@ -6,7 +6,7 @@ import type {
   InternalAxiosRequestConfig,
 } from "axios";
 import { triggerLoginModal } from "./authModalService";
-import { clearAuthSession, getAccessToken, getRefreshToken, updateStoredTokens } from "./authStorage";
+import { clearAuthSession, getAccessToken, updateStoredTokens } from "./authStorage";
 import type {AuthTokens} from "../@type/login.ts";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";

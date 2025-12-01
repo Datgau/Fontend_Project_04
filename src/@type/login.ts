@@ -8,6 +8,7 @@ export interface AuthUser {
   role: string;
   email?: string;
   fullName?: string;
+  avatar?: string;
   tokens: AuthTokens;
 }
 

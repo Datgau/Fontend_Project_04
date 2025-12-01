@@ -97,15 +97,9 @@ const PostCard = ({ post, onLikeToggle, onCommentAdd }: PostCardProps) => {
       console.log('Comment result:', result);
 
       if (result.success && result.comment) {
-        const newComment: Comment = {
-          id: result.comment.id,
-          postId: post.id,
-          user: mockCurrentUser,
-          content: commentText.trim(),
-          createdAt: new Date().toISOString(),
-        };
-        setComments([newComment, ...comments]);
-        onCommentAdd(post.id, newComment);
+        // Sử dụng comment từ API response (đã được transform trong postService)
+        setComments([result.comment, ...comments]);
+        onCommentAdd(post.id, result.comment);
         setCommentText("");
       } else {
         console.error('Failed to add comment:', result.message);

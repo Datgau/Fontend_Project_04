@@ -1,78 +1,232 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Container,
   Paper,
-  List,
-  ListItem,
-  ListItemAvatar,
-  ListItemText,
-  Avatar,
   Typography,
-  TextField,
+  Alert,
   IconButton,
-  Divider,
-  Badge,
+  Tooltip,
 } from "@mui/material";
-import {
-  Send,
-  AttachFile,
-  EmojiEmotions,
-  MoreVert,
-  Circle,
-} from "@mui/icons-material";
-import { formatDistanceToNow } from "date-fns";
-import { vi } from "date-fns/locale";
+import { Add } from "@mui/icons-material";
 import Header from "../../components/Home/Header";
-import { mockConversations, getMessagesByConversation } from "../../data/mockNotifications";
-import type { Conversation, Message } from "../../@type/notification";
+import ChatList from "../../components/Messages/ChatList";
+import ChatWindow from "../../components/Messages/ChatWindow";
+import CreateChatDialog from "../../components/Messages/CreateChatDialog";
+import { chatService } from "../../services/chatService";
+import { websocketService } from "../../services/websocketService";
+import { useAuth } from "../../routes/AuthContext";
+import type {ChatMessage, Conversation} from "../../@type/chat.ts";
 
 const Messages = () => {
-  // TODO: Replace with API calls
-  const [conversations] = useState(mockConversations);
-  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(
-    conversations[0] || null
-  );
-  const [messages, setMessages] = useState<Message[]>(
-    selectedConversation ? getMessagesByConversation(selectedConversation.id) : []
-  );
-  const [newMessage, setNewMessage] = useState("");
+  const { user } = useAuth();
+  console.log('🏠 Messages component rendered, user:', user?.username, 'id:', user?.id);
+  
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  const handleConversationSelect = (conversation: Conversation) => {
+  // Handle conversation selection
+  const handleConversationSelect = async (conversation: Conversation) => {
+    // Unsubscribe from previous room
+    if (selectedConversation && wsConnected) {
+      websocketService.unsubscribeFromRoom(selectedConversation.roomId);
+    }
+    
     setSelectedConversation(conversation);
-    // TODO: Replace with API call
-    // const msgs = await fetch(`/api/conversations/${conversation.id}/messages`);
-    setMessages(getMessagesByConversation(conversation.id));
+    setMessagesLoading(true);
+
+    try {
+      // Load messages
+      const msgs = await chatService.getMessages(conversation.roomId);
+      setMessages(msgs);
+
+      // Mark messages as read
+      if (user?.id) {
+        await chatService.markMessagesAsRead(conversation.roomId, user.id);
+        
+        // Update local unread count to 0
+        setConversations(prev =>
+          prev.map(conv =>
+            conv.roomId === conversation.roomId
+              ? { ...conv, unreadCount: 0 }
+              : conv
+          )
+        );
+      }
+
+      // Subscribe to room updates
+      if (wsConnected && websocketService.isConnected()) {
+        console.log('📡 Subscribing to room:', conversation.roomId);
+        websocketService.subscribeToRoom(conversation.roomId, (newMessage) => {
+          console.log('📨 Received message:', newMessage);
+          setMessages((prev) => [...prev, newMessage]);
+          
+          // Update conversation's last message
+          setConversations((prev) =>
+            prev.map((conv) =>
+              conv.roomId === conversation.roomId
+                ? {
+                    ...conv,
+                    lastMessage: newMessage,
+                    lastUpdated: newMessage.createdAt,
+                  }
+                : conv
+            )
+          );
+        });
+      } else {
+        console.warn('⚠️ WebSocket not connected, cannot subscribe to room');
+      }
+    } catch (err) {
+      console.error("Failed to load messages:", err);
+      setError("Không thể tải tin nhắn");
+    } finally {
+      setMessagesLoading(false);
+    }
   };
 
-  const handleSendMessage = () => {
-    if (!newMessage.trim() || !selectedConversation) return;
+  // Load conversations and optionally select one
+  const loadConversations = async (autoSelectRoomId?: number) => {
+    if (!user?.id) return;
+    
+    console.log('🔵 Loading conversations, autoSelectRoomId:', autoSelectRoomId);
+    
+    try {
+      setLoading(true);
+      const data = await chatService.getConversations(user.id);
+      console.log('✅ Loaded conversations:', data.length);
+      console.log('📋 First conversation members:', data[0]?.members);
+      setConversations(data);
+      
+      // Auto-select conversation if roomId provided
+      if (autoSelectRoomId) {
+        console.log('🔵 Looking for conversation with roomId:', autoSelectRoomId);
+        const conversation = data.find(c => c.roomId === autoSelectRoomId);
+        if (conversation) {
+          console.log('✅ Found conversation, selecting it');
+          await handleConversationSelect(conversation);
+        } else {
+          console.log('❌ Conversation not found in list');
+        }
+      }
+    } catch (err) {
+      console.error("❌ Failed to load conversations:", err);
+      setError("Không thể tải danh sách cuộc trò chuyện");
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // TODO: Replace with API call
-    // await fetch(`/api/conversations/${selectedConversation.id}/messages`, {
-    //   method: 'POST',
-    //   body: JSON.stringify({ content: newMessage }),
-    // });
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations();
+  }, [user?.id]);
 
-    const message: Message = {
-      id: `msg-${Date.now()}`,
-      conversationId: selectedConversation.id,
-      senderId: "current-user",
-      content: newMessage.trim(),
-      type: "text",
-      read: true,
-      createdAt: new Date().toISOString(),
+  // Connect WebSocket immediately
+  useEffect(() => {
+    if (!user?.id) {
+      console.log('⏳ Waiting for user to connect WebSocket...');
+      return;
+    }
+    
+    console.log('🔌 Attempting to connect WebSocket...');
+    websocketService.connect(
+      () => {
+        console.log("✅ WebSocket connected successfully");
+        setWsConnected(true);
+        setError(null);
+        
+        // Re-subscribe to current room if any
+        if (selectedConversation) {
+          console.log('🔄 Re-subscribing to current room:', selectedConversation.roomId);
+          websocketService.subscribeToRoom(selectedConversation.roomId, (newMessage) => {
+            console.log('📨 Received message:', newMessage);
+            setMessages((prev) => [...prev, newMessage]);
+            
+            setConversations((prev) =>
+              prev.map((conv) =>
+                conv.roomId === selectedConversation.roomId
+                  ? {
+                      ...conv,
+                      lastMessage: newMessage,
+                      lastUpdated: newMessage.createdAt,
+                    }
+                  : conv
+              )
+            );
+          });
+        }
+      },
+      (err) => {
+        console.error("❌ WebSocket connection error:", err);
+        setError("Không thể kết nối WebSocket. Tin nhắn có thể bị chậm.");
+      }
+    );
+
+    return () => {
+      console.log('🔌 Disconnecting WebSocket...');
+      websocketService.disconnect();
     };
+  }, [user?.id]);
 
-    setMessages([...messages, message]);
-    setNewMessage("");
+  // Handle send message
+  const handleSendMessage = async (message: string) => {
+    if (!selectedConversation || !user?.id) return;
+
+    try {
+      if (wsConnected) {
+        // Send via WebSocket - message will be received via subscription
+        websocketService.sendMessage(
+          selectedConversation.roomId,
+          user.id,
+          message
+        );
+        console.log('📤 Message sent via WebSocket');
+      } else {
+        // Fallback to REST API
+        const newMessage = await chatService.sendMessage(
+          selectedConversation.roomId,
+          user.id,
+          message
+        );
+        setMessages((prev) => [...prev, newMessage]);
+      }
+    } catch (err) {
+      console.error("Failed to send message:", err);
+      setError("Không thể gửi tin nhắn");
+    }
   };
+
+  if (!user) {
+    return (
+      <Box sx={{ minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
+        <Header />
+        <Container maxWidth="lg" sx={{ py: 3 }}>
+          <Alert severity="warning">
+            Vui lòng đăng nhập để sử dụng tính năng chat
+          </Alert>
+        </Container>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ minHeight: "100vh", backgroundColor: "#f0f2f5" }}>
       <Header />
 
       <Container maxWidth="lg" sx={{ py: 3 }}>
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
         <Paper
           sx={{
             height: "calc(100vh - 140px)",
@@ -86,220 +240,50 @@ const Messages = () => {
               width: { xs: "100%", md: 360 },
               borderRight: { md: 1 },
               borderColor: "divider",
-              display: { xs: selectedConversation ? "none" : "block", md: "block" },
+              display: { xs: selectedConversation ? "none" : "flex", md: "flex" },
+              flexDirection: "column",
             }}
           >
-            <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider" }}>
-              <Typography variant="h6" fontWeight={600}>
-                Tin nhắn
-              </Typography>
+            <Box sx={{ p: 2, borderBottom: 1, borderColor: "divider", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <Box>
+                <Typography variant="h6" fontWeight={600}>
+                  Tin nhắn
+                </Typography>
+                {!wsConnected && (
+                  <Typography variant="caption" color="warning.main">
+                    Đang kết nối...
+                  </Typography>
+                )}
+              </Box>
+              <Tooltip title="Tạo cuộc trò chuyện mới">
+                <IconButton
+                  color="primary"
+                  onClick={() => setCreateDialogOpen(true)}
+                  size="small"
+                >
+                  <Add />
+                </IconButton>
+              </Tooltip>
             </Box>
 
-            <List sx={{ overflow: "auto", height: "calc(100% - 73px)" }}>
-              {conversations.map((conversation) => {
-                const participant = conversation.participants[0];
-                const isSelected = selectedConversation?.id === conversation.id;
-                const isUnread = conversation.unreadCount > 0;
-
-                return (
-                  <ListItem
-                    key={conversation.id}
-                    button
-                    selected={isSelected}
-                    onClick={() => handleConversationSelect(conversation)}
-                    sx={{
-                      backgroundColor: isUnread && !isSelected ? "action.hover" : undefined,
-                    }}
-                  >
-                    <ListItemAvatar>
-                      <Badge
-                        overlap="circular"
-                        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                        badgeContent={
-                          participant.online ? (
-                            <Circle
-                              sx={{
-                                width: 12,
-                                height: 12,
-                                color: "success.main",
-                                border: "2px solid white",
-                                borderRadius: "50%",
-                              }}
-                            />
-                          ) : null
-                        }
-                      >
-                        <Avatar src={participant.avatar} />
-                      </Badge>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={
-                        <Typography
-                          variant="subtitle2"
-                          fontWeight={isUnread ? 600 : 400}
-                        >
-                          {participant.fullName}
-                        </Typography>
-                      }
-                      secondary={
-                        <Typography
-                          variant="body2"
-                          color={isUnread ? "text.primary" : "text.secondary"}
-                          fontWeight={isUnread ? 500 : 400}
-                          noWrap
-                        >
-                          {conversation.lastMessage.content}
-                        </Typography>
-                      }
-                    />
-                    {isUnread && (
-                      <Box
-                        sx={{
-                          minWidth: 20,
-                          height: 20,
-                          borderRadius: "50%",
-                          backgroundColor: "primary.main",
-                          color: "white",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: "0.75rem",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {conversation.unreadCount}
-                      </Box>
-                    )}
-                  </ListItem>
-                );
-              })}
-            </List>
+            <ChatList
+              conversations={conversations}
+              selectedRoomId={selectedConversation?.roomId || null}
+              onSelectConversation={handleConversationSelect}
+              loading={loading}
+              currentUserId={user.id}
+            />
           </Box>
 
           {/* Chat Area */}
           {selectedConversation ? (
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-              }}
-            >
-              {/* Chat Header */}
-              <Box
-                sx={{
-                  p: 2,
-                  borderBottom: 1,
-                  borderColor: "divider",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Avatar src={selectedConversation.participants[0].avatar} />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {selectedConversation.participants[0].fullName}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {selectedConversation.participants[0].online
-                      ? "Đang hoạt động"
-                      : "Không hoạt động"}
-                  </Typography>
-                </Box>
-                <IconButton>
-                  <MoreVert />
-                </IconButton>
-              </Box>
-
-              {/* Messages */}
-              <Box
-                sx={{
-                  flex: 1,
-                  overflow: "auto",
-                  p: 2,
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 1,
-                }}
-              >
-                {messages.map((message) => {
-                  const isOwn = message.senderId === "current-user";
-
-                  return (
-                    <Box
-                      key={message.id}
-                      sx={{
-                        display: "flex",
-                        justifyContent: isOwn ? "flex-end" : "flex-start",
-                      }}
-                    >
-                      <Box
-                        sx={{
-                          maxWidth: "70%",
-                          backgroundColor: isOwn ? "primary.main" : "grey.200",
-                          color: isOwn ? "white" : "text.primary",
-                          borderRadius: 2,
-                          px: 2,
-                          py: 1,
-                        }}
-                      >
-                        <Typography variant="body2">{message.content}</Typography>
-                        <Typography
-                          variant="caption"
-                          sx={{
-                            opacity: 0.7,
-                            display: "block",
-                            mt: 0.5,
-                          }}
-                        >
-                          {formatDistanceToNow(new Date(message.createdAt), {
-                            locale: vi,
-                          })}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  );
-                })}
-              </Box>
-
-              <Divider />
-
-              {/* Message Input */}
-              <Box sx={{ p: 2, display: "flex", gap: 1, alignItems: "center" }}>
-                <IconButton size="small">
-                  <AttachFile />
-                </IconButton>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Nhập tin nhắn..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      handleSendMessage();
-                    }
-                  }}
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 3,
-                    },
-                  }}
-                />
-                <IconButton size="small">
-                  <EmojiEmotions />
-                </IconButton>
-                <IconButton
-                  color="primary"
-                  onClick={handleSendMessage}
-                  disabled={!newMessage.trim()}
-                >
-                  <Send />
-                </IconButton>
-              </Box>
-            </Box>
+            <ChatWindow
+              conversation={selectedConversation}
+              messages={messages}
+              currentUserId={user.id}
+              onSendMessage={handleSendMessage}
+              loading={messagesLoading}
+            />
           ) : (
             <Box
               sx={{
@@ -315,6 +299,44 @@ const Messages = () => {
             </Box>
           )}
         </Paper>
+
+        <CreateChatDialog
+          open={createDialogOpen}
+          onClose={() => setCreateDialogOpen(false)}
+          currentUserId={user!.id}
+          onChatCreated={(roomId, targetUser) => {
+            // Create temporary conversation object with both users
+            const newConversation: Conversation = {
+              roomId,
+              isGroup: false,
+              roomName: null,
+              memberIds: [user!.id, targetUser.id],
+              members: [
+                {
+                  id: user!.id,
+                  username: user!.username,
+                  fullName: user!.fullName || user!.username,
+                  avatar: user!.avatar || ''
+                },
+                targetUser
+              ],
+              lastMessage: null,
+              lastUpdated: new Date().toISOString(),
+              unreadCount: 0
+            };
+            
+            setConversations(prev => {
+              const exists = prev.find(c => c.roomId === roomId);
+              if (exists) {
+                // If exists, select it
+                handleConversationSelect(exists);
+                return prev;
+              }
+              handleConversationSelect(newConversation);
+              return [newConversation, ...prev];
+            });
+          }}
+        />
       </Container>
     </Box>
   );

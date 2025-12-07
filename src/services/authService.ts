@@ -27,6 +27,7 @@ export interface LoginPayload {
 }
 
 export interface LoginResult {
+  id: number;
   username: string;
   role: string;
   email?: string;

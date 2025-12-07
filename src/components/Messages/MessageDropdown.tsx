@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   IconButton,
   Badge,
@@ -9,25 +9,29 @@ import {
   Box,
   Divider,
   Button,
+  CircularProgress,
 } from "@mui/material";
-import { Message as MessageIcon, Circle } from "@mui/icons-material";
+import { Message as MessageIcon } from "@mui/icons-material";
 import { formatDistanceToNow } from "date-fns";
 import { vi } from "date-fns/locale";
 import { useNavigate } from "react-router-dom";
-import { mockConversations } from "../../data/mockNotifications";
+import { useAuth } from "../../routes/AuthContext";
+import { useChatContext } from "../../contexts/ChatContext";
 
 const MessageDropdown = () => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const { conversations, totalUnread, loadConversations } = useChatContext();
 
-  // TODO: Replace with API call
-  // const { data: conversations } = useQuery('/api/conversations');
-  const conversations = mockConversations;
-
-  const totalUnread = conversations.reduce(
-    (sum, conv) => sum + conv.unreadCount,
-    0
-  );
+  // Reload when dropdown opens to get fresh data
+  useEffect(() => {
+    if (anchorEl && user?.id) {
+      setLoading(true);
+      loadConversations().finally(() => setLoading(false));
+    }
+  }, [anchorEl]);
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -37,8 +41,8 @@ const MessageDropdown = () => {
     setAnchorEl(null);
   };
 
-  const handleConversationClick = (conversationId: string) => {
-    navigate(`/messages/${conversationId}`);
+  const handleConversationClick = (roomId: number) => {
+    navigate(`/messages?roomId=${roomId}`);
     handleClose();
   };
 
@@ -77,7 +81,11 @@ const MessageDropdown = () => {
         </Box>
 
         {/* Conversations List */}
-        {conversations.length === 0 ? (
+        {loading ? (
+          <Box sx={{ py: 4, textAlign: "center" }}>
+            <CircularProgress size={24} />
+          </Box>
+        ) : conversations.length === 0 ? (
           <Box sx={{ py: 4, textAlign: "center" }}>
             <Typography variant="body2" color="text.secondary">
               Chưa có tin nhắn nào
@@ -85,13 +93,18 @@ const MessageDropdown = () => {
           </Box>
         ) : [
             ...conversations.slice(0, 5).map((conversation) => {
-              const participant = conversation.participants[0];
+              // Get other user info (not current user)
+              const otherUser = conversation.members?.find(m => m.id !== user?.id);
+              const displayName = conversation.isGroup 
+                ? (conversation.roomName || "Nhóm")
+                : (otherUser?.fullName || otherUser?.username || "Unknown");
+              const avatar = conversation.isGroup ? undefined : otherUser?.avatar;
               const isUnread = conversation.unreadCount > 0;
 
               return (
                 <MenuItem
-                  key={conversation.id}
-                  onClick={() => handleConversationClick(conversation.id)}
+                  key={conversation.roomId}
+                  onClick={() => handleConversationClick(conversation.roomId)}
                   sx={{
                     py: 1.5,
                     px: 2,
@@ -102,27 +115,13 @@ const MessageDropdown = () => {
                   }}
                 >
                   <Box sx={{ display: "flex", gap: 1.5, width: "100%" }}>
-                    {/* Avatar with online status */}
-                    <Box sx={{ position: "relative" }}>
-                      <Avatar
-                        src={participant.avatar}
-                        sx={{ width: 48, height: 48 }}
-                      />
-                      {participant.online && (
-                        <Circle
-                          sx={{
-                            position: "absolute",
-                            bottom: 2,
-                            right: 2,
-                            width: 12,
-                            height: 12,
-                            color: "success.main",
-                            backgroundColor: "white",
-                            borderRadius: "50%",
-                          }}
-                        />
-                      )}
-                    </Box>
+                    {/* Avatar */}
+                    <Avatar
+                      src={avatar}
+                      sx={{ width: 48, height: 48 }}
+                    >
+                      {displayName.charAt(0).toUpperCase()}
+                    </Avatar>
 
                     {/* Content */}
                     <Box sx={{ flex: 1, minWidth: 0 }}>
@@ -138,16 +137,19 @@ const MessageDropdown = () => {
                           fontWeight={isUnread ? 600 : 400}
                           noWrap
                         >
-                          {participant.fullName}
+                          {displayName}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {formatDistanceToNow(
-                            new Date(conversation.updatedAt),
-                            {
-                              locale: vi,
-                            }
-                          )}
-                        </Typography>
+                        {conversation.lastUpdated && (
+                          <Typography variant="caption" color="text.secondary">
+                            {formatDistanceToNow(
+                              new Date(conversation.lastUpdated),
+                              {
+                                locale: vi,
+                                addSuffix: false,
+                              }
+                            )}
+                          </Typography>
+                        )}
                       </Box>
 
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -158,7 +160,7 @@ const MessageDropdown = () => {
                           noWrap
                           sx={{ flex: 1 }}
                         >
-                          {conversation.lastMessage.content}
+                          {conversation.lastMessage?.message || "Chưa có tin nhắn"}
                         </Typography>
                         {isUnread && (
                           <Box

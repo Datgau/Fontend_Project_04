@@ -22,6 +22,7 @@ export const privateClient = createClient();
 
 privateClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getAccessToken();
+  
   if (token) {
     if (!config.headers) {
       config.headers = new AxiosHeaders();

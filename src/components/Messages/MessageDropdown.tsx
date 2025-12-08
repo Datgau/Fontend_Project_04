@@ -187,13 +187,13 @@ const MessageDropdown = () => {
               );
             }),
             <Divider key="divider" />,
-            <Box key="view-all" sx={{ p: 1 }}>
+          ]
+        }
+        <Box key="view-all" sx={{ p: 1 }}>
               <Button fullWidth onClick={handleViewAll}>
                 Xem tất cả tin nhắn
               </Button>
-            </Box>
-          ]
-        }
+        </Box>
       </Menu>
     </>
   );

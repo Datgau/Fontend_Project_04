@@ -10,19 +10,16 @@ class WebSocketService {
 
   connect(onConnected?: () => void, onError?: (error: any) => void) {
     if (this.connected) {
-      console.log('✅ WebSocket already connected');
       onConnected?.();
       return;
     }
 
     const wsUrl = `${import.meta.env.VITE_API_URL}/ws`;
-    console.log('🔌 Connecting to WebSocket:', wsUrl);
     const socket = new SockJS(wsUrl);
     
     this.client = new Client({
       webSocketFactory: () => socket as any,
       debug: (str) => {
-        console.log('STOMP: ' + str);
       },
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
@@ -30,19 +27,16 @@ class WebSocketService {
     });
 
     this.client.onConnect = () => {
-      console.log('WebSocket Connected');
       this.connected = true;
       onConnected?.();
     };
 
     this.client.onStompError = (frame) => {
-      console.error('STOMP error:', frame);
       this.connected = false;
       onError?.(frame);
     };
 
     this.client.onWebSocketClose = () => {
-      console.log('WebSocket Disconnected');
       this.connected = false;
     };
 
@@ -64,7 +58,6 @@ class WebSocketService {
       return;
     }
 
-    // Unsubscribe if already subscribed
     if (this.subscriptions.has(roomId)) {
       this.unsubscribeFromRoom(roomId);
     }

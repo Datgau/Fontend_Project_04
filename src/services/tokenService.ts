@@ -17,18 +17,12 @@ const onTokenRefreshed = (token: string) => {
   refreshSubscribers = [];
 };
 
-/**
- * Refresh access token using refresh token from cookie
- * Implements debouncing - multiple simultaneous calls will share the same refresh request
- */
 export const refreshAccessToken = async (): Promise<string> => {
-  // If already refreshing, return the existing promise
   if (isRefreshing && refreshPromise) {
     console.log("Token refresh already in progress, waiting...");
     return refreshPromise;
   }
 
-  // If multiple requests come in, queue them
   if (isRefreshing) {
     return new Promise((resolve, reject) => {
       subscribeTokenRefresh((token: string) => {
@@ -39,26 +33,16 @@ export const refreshAccessToken = async (): Promise<string> => {
 
   isRefreshing = true;
 
-  // Create and store the refresh promise
   refreshPromise = (async () => {
     try {
-      console.log("Refreshing access token...");
-      
-      // Backend uses refresh token from cookie (withCredentials: true)
       const response = await publicClient.post("/auth/refresh-token");
 
       if (response.data?.success && response.data?.data?.accessToken) {
         const newAccessToken = response.data.data.accessToken;
-        
-        console.log("Token refreshed successfully");
-        
-        // Update stored tokens
         updateStoredTokens({
           accessToken: newAccessToken,
           expiresIn: response.data.data.expiresIn,
         });
-
-        // Notify all waiting requests
         onTokenRefreshed(newAccessToken);
         
         return newAccessToken;

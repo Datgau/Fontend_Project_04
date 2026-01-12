@@ -24,7 +24,6 @@ export interface UpdateFAQDto {
 }
 
 export const faqService = {
-  // Lấy tất cả FAQ (cho admin) - ĐÃ SỬA: bỏ header thủ công
   getAllFaqs: async (): Promise<FAQ[]> => {
     const response = await api.get('/faq/all'); 
     return response.data;

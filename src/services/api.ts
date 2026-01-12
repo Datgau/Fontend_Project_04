@@ -29,8 +29,6 @@ privateClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
     }
     config.headers.set("Authorization", `Bearer ${token}`);
   }
-  
-  // Set Content-Type to JSON by default if not already set and not FormData
   if (!config.headers.has("Content-Type") && !(config.data instanceof FormData)) {
     config.headers.set("Content-Type", "application/json");
   }
@@ -46,7 +44,6 @@ interface RefreshTokenResponse {
 }
 
 const refreshAccessToken = async (): Promise<string> => {
-  // Refresh token được gửi tự động qua cookie (httpOnly)
   const response: AxiosResponse<RefreshTokenResponse> = await publicClient.post("/auth/refresh-token");
   
   const newAccessToken = response.data?.data?.accessToken;
@@ -76,11 +73,8 @@ privateClient.interceptors.response.use(
           if (!originalRequest.headers) {
             originalRequest.headers = new AxiosHeaders();
           }
-          
-          // Gắn token mới vào request
           originalRequest.headers.set("Authorization", `Bearer ${newAccessToken}`);
-          
-          // Retry request với token mới
+
           return privateClient(originalRequest);
         } catch (refreshError) {
           clearAuthSession();

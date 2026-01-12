@@ -18,11 +18,13 @@ import AuthRedirect from "../components/Auth/AuthRedirect";
 import Profile from "../pages/Profile";
 import Settings from "../pages/Settings";
 import Admin from "../pages/Admin";
+import {ChatProvider} from "../contexts/ChatContext.tsx";
 
 export const AppRouter = () => (
     <>
     {/*<GlobalLoginModal />*/}
     <AuthProvider>
+        <ChatProvider>
         <Routes>
             {/* Root - Redirect based on auth state */}
             <Route path="/" element={<AuthRedirect />} />
@@ -87,6 +89,7 @@ export const AppRouter = () => (
             pauseOnHover
             theme="light"
         />
+        </ChatProvider>
     </AuthProvider>
 </>
 );

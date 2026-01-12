@@ -46,7 +46,7 @@ const CreateChatDialog = ({
     try {
       setLoading(true);
       setError(null);
-      const results = await chatService.getAllUsers(pageNum, 20);
+      const results = await chatService.getUsersByFollow(pageNum, 20);
       
       if (results.length < 20) {
         setHasMore(false);
@@ -155,7 +155,6 @@ const CreateChatDialog = ({
               <ListItem key={targetUser.id} disablePadding>
                 <ListItemButton
                   onClick={() => {
-                    console.log('🟢 ListItemButton clicked:', targetUser.username, 'creating:', creating);
                     handleSelectUser(targetUser);
                   }}
                   disabled={creating}
@@ -176,8 +175,6 @@ const CreateChatDialog = ({
                 </ListItemButton>
               </ListItem>
             ))}
-
-            {/* Infinite scroll trigger */}
             {hasMore && (
               <Box
                 ref={observerTarget}

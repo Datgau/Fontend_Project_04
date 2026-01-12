@@ -43,7 +43,6 @@ const ChatList = ({
     if (conversation.isGroup) {
       return undefined;
     }
-    // For 1-1 chat, show other user's avatar
     const otherUser = conversation.members?.find(m => m.id !== currentUserId);
     return otherUser?.avatar;
   };

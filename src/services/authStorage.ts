@@ -5,6 +5,7 @@ const STORAGE_KEY = "pulse.auth.session";
 interface StoredSession {
   user: AuthUser;
   remember: boolean;
+
 }
 
 const parseSession = (value: string | null): StoredSession | null => {
@@ -45,10 +46,6 @@ export const getAccessToken = (): string | null => {
   return session?.user.tokens.accessToken ?? null;
 };
 
-export const getRefreshToken = (): string | null => {
-  const session = readSession();
-  return session?.user.tokens.refreshToken ?? null;
-};
 
 export const updateStoredTokens = (tokens: Partial<AuthTokens>) => {
   const session = readSession();

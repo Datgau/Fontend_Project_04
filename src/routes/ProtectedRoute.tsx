@@ -15,7 +15,6 @@ const ProtectedRoute = ({ allowedRoles }: ProtectedRouteProps) => {
   console.log("ProtectedRoute - IsLoggedIn:", isLoggedIn);
   console.log("ProtectedRoute - User:", user);
 
-  // Show loading spinner while checking auth
   if (loading) {
     return (
       <Box

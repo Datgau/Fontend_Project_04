@@ -31,9 +31,7 @@ const Messages = () => {
   const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
-  // Handle conversation selection
   const handleConversationSelect = async (conversation: Conversation) => {
-    // Unsubscribe from previous room
     if (selectedConversation && wsConnected) {
       websocketService.unsubscribeFromRoom(selectedConversation.roomId);
     }
@@ -42,15 +40,10 @@ const Messages = () => {
     setMessagesLoading(true);
 
     try {
-      // Load messages
       const msgs = await chatService.getMessages(conversation.roomId);
       setMessages(msgs);
-
-      // Mark messages as read
       if (user?.id) {
         await chatService.markMessagesAsRead(conversation.roomId, user.id);
-        
-        // Update local unread count to 0
         setConversations(prev =>
           prev.map(conv =>
             conv.roomId === conversation.roomId
@@ -60,15 +53,11 @@ const Messages = () => {
         );
       }
 
-      // Subscribe to room updates
       if (wsConnected && websocketService.isConnected()) {
-        console.log('📡 Subscribing to room:', conversation.roomId);
         websocketService.subscribeToRoom(conversation.roomId, (newMessage) => {
-          console.log('📨 Received message:', newMessage);
           setMessages((prev) => [...prev, newMessage]);
           
-          // Update conversation's last message
-          setConversations((prev) =>
+        setConversations((prev) =>
             prev.map((conv) =>
               conv.roomId === conversation.roomId
                 ? {
@@ -81,10 +70,9 @@ const Messages = () => {
           );
         });
       } else {
-        console.warn('⚠️ WebSocket not connected, cannot subscribe to room');
+        setError("WebSocket not connected, cannot subscribe to room");
       }
     } catch (err) {
-      console.error("Failed to load messages:", err);
       setError("Không thể tải tin nhắn");
     } finally {
       setMessagesLoading(false);
@@ -94,29 +82,19 @@ const Messages = () => {
   // Load conversations and optionally select one
   const loadConversations = async (autoSelectRoomId?: number) => {
     if (!user?.id) return;
-    
-    console.log('🔵 Loading conversations, autoSelectRoomId:', autoSelectRoomId);
-    
     try {
       setLoading(true);
       const data = await chatService.getConversations(user.id);
-      console.log('✅ Loaded conversations:', data.length);
-      console.log('📋 First conversation members:', data[0]?.members);
       setConversations(data);
-      
-      // Auto-select conversation if roomId provided
       if (autoSelectRoomId) {
-        console.log('🔵 Looking for conversation with roomId:', autoSelectRoomId);
         const conversation = data.find(c => c.roomId === autoSelectRoomId);
         if (conversation) {
-          console.log('✅ Found conversation, selecting it');
           await handleConversationSelect(conversation);
         } else {
-          console.log('❌ Conversation not found in list');
+          setError("Cuộc trò chuyện không tồn tại");
         }
       }
     } catch (err) {
-      console.error("❌ Failed to load conversations:", err);
       setError("Không thể tải danh sách cuộc trò chuyện");
     } finally {
       setLoading(false);
@@ -131,18 +109,13 @@ const Messages = () => {
   // Connect WebSocket immediately
   useEffect(() => {
     if (!user?.id) {
-      console.log('⏳ Waiting for user to connect WebSocket...');
+      console.log('Waiting for user to connect WebSocket...');
       return;
     }
-    
-    console.log('🔌 Attempting to connect WebSocket...');
     websocketService.connect(
       () => {
-        console.log("✅ WebSocket connected successfully");
         setWsConnected(true);
         setError(null);
-        
-        // Re-subscribe to current room if any
         if (selectedConversation) {
           console.log('🔄 Re-subscribing to current room:', selectedConversation.roomId);
           websocketService.subscribeToRoom(selectedConversation.roomId, (newMessage) => {
@@ -164,7 +137,6 @@ const Messages = () => {
         }
       },
       (err) => {
-        console.error("❌ WebSocket connection error:", err);
         setError("Không thể kết nối WebSocket. Tin nhắn có thể bị chậm.");
       }
     );
@@ -181,7 +153,6 @@ const Messages = () => {
 
     try {
       if (wsConnected) {
-        // Send via WebSocket - message will be received via subscription
         websocketService.sendMessage(
           selectedConversation.roomId,
           user.id,

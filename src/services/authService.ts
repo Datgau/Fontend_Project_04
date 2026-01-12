@@ -1,11 +1,5 @@
 import { publicClient } from "./api";
-
-export interface ApiResponse<T> {
-  success: boolean;
-  message: string;
-  data: T;
-  status: number;
-}
+import type {ApiResponse} from "../@type/apiResponse.ts";
 
 export interface RegisterPayload {
   username: string;

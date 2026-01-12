@@ -76,7 +76,6 @@ class WebSocketService {
 
     this.subscriptions.set(roomId, subscription);
     this.messageCallbacks.set(roomId, callback);
-    console.log(`✅ Subscribed to room ${roomId}`);
   }
 
   unsubscribeFromRoom(roomId: number) {
@@ -84,7 +83,6 @@ class WebSocketService {
     if (subscription) {
       subscription.unsubscribe();
       this.subscriptions.delete(roomId);
-      console.log(`❌ Unsubscribed from room ${roomId}`);
     }
     this.messageCallbacks.delete(roomId);
   }
@@ -94,7 +92,6 @@ class WebSocketService {
       console.error('WebSocket not connected');
       return;
     }
-
     const payload = {
       roomId,
       senderId,
@@ -105,15 +102,8 @@ class WebSocketService {
       destination: '/app/chat.send',
       body: JSON.stringify(payload),
     });
-
-    console.log('Message sent:', payload);
   }
 
-  subscribeToUserQueue(userId: number, callback: () => void) {
-    // TODO: Implement user-specific queue subscription
-    // For now, this is a placeholder
-    console.log(`📬 Subscribed to user queue for user ${userId}`);
-  }
 
   isConnected(): boolean {
     return this.connected;

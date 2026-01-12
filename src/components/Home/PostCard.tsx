@@ -1,19 +1,19 @@
-import { useState, memo } from "react";
+import {useState, memo, useEffect} from "react";
 import {
-  Card,
-  CardHeader,
-  CardContent,
-  CardActions,
-  Avatar,
-  IconButton,
-  Typography,
-  Box,
-  Collapse,
-  Divider,
-  TextField,
-  Button,
-  Fade,
-  Zoom,
+    Card,
+    CardHeader,
+    CardContent,
+    CardActions,
+    Avatar,
+    IconButton,
+    Typography,
+    Box,
+    Collapse,
+    Divider,
+    TextField,
+    Button,
+    Fade,
+    Zoom, Tooltip,
 } from "@mui/material";
 import {
   MoreVert,
@@ -28,8 +28,11 @@ import { vi } from "date-fns/locale";
 import type { Post, Comment } from "../../@type/post";
 import { PostService } from "../../services/postService";
 import { useAuth } from "../../routes/AuthContext";
-import { mockCurrentUser } from "../../data/mockData";
-
+import {FollowService} from "../../services/followService.ts";
+import {CircularProgress } from "@mui/material";
+import { PersonAdd } from "@mui/icons-material";
+import PeopleIcon from '@mui/icons-material/People';
+import DoneAllIcon from '@mui/icons-material/DoneAll';
 interface PostCardProps {
   post: Post;
   onLikeToggle: (postId: number, isLiked: boolean) => void;
@@ -44,12 +47,15 @@ const PostCard = ({ post, onLikeToggle, onCommentAdd }: PostCardProps) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loadingComments, setLoadingComments] = useState(false);
   const [isLikeAnimating, setIsLikeAnimating] = useState(false);
+  const [isFollowing, setIsFollowing] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [isMutual, setIsMutual] = useState(false);
+
 
   const isLiked = post.likedByCurrentUser;
   const likesCount = post.likesCount;
   const commentsCount = post.commentsCount;
-
-  // Fallback values cho user avatar
+  const currentUserId = user?.id || 0;
   const currentUserAvatar = user?.avatar || "/heartbeat.svg";
 
   const handleToggleComments = async () => {
@@ -69,14 +75,69 @@ const PostCard = ({ post, onLikeToggle, onCommentAdd }: PostCardProps) => {
     setShowComments(!showComments);
   };
 
-  const handleLike = async () => {
+    useEffect(() => {
+        let mounted = true;
+
+        const checkFollowStatus = async () => {
+            try {
+                const followRes = await FollowService.isFollowing(post.user.id);
+
+                if (mounted && followRes.success) {
+                    setIsFollowing(followRes.data === true);
+                }
+
+                const mutualRes = await FollowService.checkMutualFollow(post.user.id);
+
+                if (mounted && mutualRes.success) {
+                    setIsMutual(mutualRes.data === true);
+                }
+            } catch (e) {
+                console.error("Check follow status failed", e);
+            }
+        };
+
+        checkFollowStatus();
+
+        return () => {
+            mounted = false;
+        };
+    }, [post.user.id]);
+
+    const handleToggleFollow = async () => {
+        if (loading) return;
+        setLoading(true);
+        try {
+            const res = isFollowing
+                ? await FollowService.unfollowUser(post.user.id)
+                : await FollowService.followUser(post.user.id);
+
+            if (res.success) {
+                const nextFollowing = !isFollowing;
+                setIsFollowing(nextFollowing);
+                if (nextFollowing) {
+                    const mutualRes = await FollowService.checkMutualFollow(post.user.id);
+                    if (mutualRes.success) {
+                        setIsMutual(mutualRes.data === true);
+                    }
+                } else {
+                    setIsMutual(false);
+                }
+            } else {
+                alert(res.message || "Action failed");
+            }
+        } catch (error) {
+            alert("Có lỗi xảy ra khi xử lý follow");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleLike = async () => {
     setIsLikeAnimating(true);
     setTimeout(() => setIsLikeAnimating(false), 600);
 
     try {
-      console.log('Toggling like for post:', post.id);
       const result = await PostService.toggleLike(post.id);
-      console.log('Like result:', result);
 
       if (result.success) {
         onLikeToggle(post.id, result.isLiked);
@@ -92,12 +153,8 @@ const PostCard = ({ post, onLikeToggle, onCommentAdd }: PostCardProps) => {
     if (!commentText.trim()) return;
 
     try {
-      console.log('Adding comment to post:', post.id);
       const result = await PostService.addComment(post.id, commentText.trim());
-      console.log('Comment result:', result);
-
       if (result.success && result.comment) {
-        // Sử dụng comment từ API response (đã được transform trong postService)
         setComments([result.comment, ...comments]);
         onCommentAdd(post.id, result.comment);
         setCommentText("");
@@ -130,86 +187,128 @@ const PostCard = ({ post, onLikeToggle, onCommentAdd }: PostCardProps) => {
           }}
       >
         {/* Header với hiệu ứng hover */}
-        <CardHeader
-            avatar={
-              <Box
-                  sx={{
-                    position: 'relative',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      inset: -2,
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      opacity: 0,
-                      transition: 'opacity 0.3s',
-                    },
-                    '&:hover::before': {
-                      opacity: 0.2,
-                    },
-                  }}
-              >
-                <Avatar
-                    src={post.user.avatar}
-                    sx={{
-                      width: { xs: 40, sm: 44 },
-                      height: { xs: 40, sm: 44 },
-                      border: '2px solid white',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                      transition: 'transform 0.3s',
-                      '&:hover': {
-                        transform: 'scale(1.05)',
-                      },
-                    }}
-                />
-              </Box>
-            }
-            action={
-              <IconButton
-                  size="small"
-                  sx={{
-                    transition: 'all 0.2s',
-                    '&:hover': {
-                      backgroundColor: 'rgba(0,0,0,0.08)',
-                      transform: 'rotate(90deg)',
-                    },
-                  }}
-              >
-                <MoreVert fontSize="small" />
-              </IconButton>
-            }
-            title={
-              <Typography
-                  variant="subtitle1"
-                  fontWeight={700}
-                  sx={{
-                    fontSize: { xs: "0.95rem", sm: "1.05rem" },
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    backgroundClip: 'text',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    display: 'inline-block',
-                  }}
-              >
-                {post.user.fullName}
-              </Typography>
-            }
-            subheader={
-              <Typography
-                  variant="caption"
-                  color="text.secondary"
-                  sx={{
-                    fontSize: { xs: "0.7rem", sm: "0.75rem" },
-                    fontWeight: 500,
-                    mt: 0.5,
-                    display: 'block',
-                  }}
-              >
-                {timeAgo}
-              </Typography>
-            }
-            sx={{ pb: 1.5, pt: 2 }}
-        />
+          <CardHeader
+              avatar={
+                  <Box
+                      sx={{
+                          position: "relative",
+                          "&::before": {
+                              content: '""',
+                              position: "absolute",
+                              inset: -2,
+                              borderRadius: "50%",
+                              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                              opacity: 0,
+                              transition: "opacity 0.3s",
+                          },
+                          "&:hover::before": {
+                              opacity: 0.2,
+                          },
+                      }}
+                  >
+                      <Avatar
+                          src={post.user.avatar}
+                          sx={{
+                              width: { xs: 40, sm: 44 },
+                              height: { xs: 40, sm: 44 },
+                              border: "2px solid white",
+                              boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                              transition: "transform 0.3s",
+                              "&:hover": {
+                                  transform: "scale(1.05)",
+                              },
+                          }}
+                      />
+                  </Box>
+              }
+              action={
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      {post.user.id !== currentUserId && (
+                          <Tooltip
+                              title={
+                                  loading
+                                      ? "Đang xử lý..."
+                                      : isMutual
+                                          ? "Bạn bè"
+                                          : isFollowing
+                                              ? "Đang theo dõi"
+                                              : "Theo dõi"
+                              }
+                          >
+                <span>
+                  <IconButton
+                      size="small"
+                      color={
+                          isMutual
+                              ? "success"
+                              : isFollowing
+                                  ? "secondary"
+                                  : "primary"
+                      }
+                      onClick={handleToggleFollow}
+                      disabled={loading}
+                  >
+                    {loading ? (
+                        <CircularProgress size={18} color="inherit" />
+                    ) : isMutual ? (
+                        <PeopleIcon />
+                    ) : isFollowing ? (
+                        <DoneAllIcon />
+                    ) : (
+                        <PersonAdd />
+                    )}
+                  </IconButton>
+                </span>
+                          </Tooltip>
+                      )}
+
+                      {/* Nút More vẫn luôn hiển thị */}
+                      <IconButton
+                          size="small"
+                          sx={{
+                              transition: "all 0.2s",
+                              "&:hover": {
+                                  backgroundColor: "rgba(0,0,0,0.08)",
+                                  transform: "rotate(90deg)",
+                              },
+                          }}
+                      >
+                          <MoreVert fontSize="small" />
+                      </IconButton>
+                  </Box>
+          }
+              title={
+                  <Typography
+                      variant="subtitle1"
+                      fontWeight={700}
+                      sx={{
+                          fontSize: { xs: "0.95rem", sm: "1.05rem" },
+                          background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          backgroundClip: "text",
+                          WebkitBackgroundClip: "text",
+                          WebkitTextFillColor: "transparent",
+                          display: "inline-block",
+                      }}
+                  >
+                      {post.user.fullName}
+                  </Typography>
+              }
+              subheader={
+                  <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      sx={{
+                          fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                          fontWeight: 500,
+                          mt: 0.5,
+                          display: "block",
+                      }}
+                  >
+                      {timeAgo}
+                  </Typography>
+              }
+              sx={{ pb: 1.5, pt: 2 }}
+          />
 
         {/* Content với animation fade-in */}
         <CardContent sx={{ pt: 0, px: { xs: 2.5, sm: 3 }, pb: { xs: 1.5, sm: 2 } }}>
@@ -284,7 +383,6 @@ const PostCard = ({ post, onLikeToggle, onCommentAdd }: PostCardProps) => {
             </Box>
         )}
 
-        {/* Stats với animation */}
         <Box sx={{ px: { xs: 2.5, sm: 3 }, py: 1.5, display: "flex", justifyContent: "space-between" }}>
           <Zoom in={likesCount > 0}>
             <Typography
